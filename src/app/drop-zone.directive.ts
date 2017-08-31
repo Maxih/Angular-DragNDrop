@@ -22,7 +22,6 @@ export class DropZoneDirective  {
     const index = this.calculateDropIndex(event);
 
     this.sfDragIndex.next(index);
-    this.ghostIdx = index;
   }
 
 
@@ -66,6 +65,8 @@ export class DropZoneDirective  {
     if (dropIndex >= this.dragZone.element.nativeElement.children.length) {
       dropIndex = this.dragZone.element.nativeElement.children.length - 1;
     }
+
+    this.ghostIdx = dropIndex;
 
     return dropIndex;
   }

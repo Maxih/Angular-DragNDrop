@@ -149,3 +149,102 @@ Finally, the optional data from the config gets assigned onto the instance of th
 ### DropZoneComponent
 
 #### A target for dropping Components
+
+Contained on the `DropZoneComponent` are the properties:
+
+```
+hoverIndex: number = null;
+
+@Input('sfDragItems') dragItems: DragItemConfig[] = [];
+
+@HostBinding('class.target-zone') showTarget = false;
+
+@ViewChild('dropZone', { read: ViewContainerRef }) dropZoneRef: ViewContainerRef;
+
+dragStartSub: Subscription;
+dragEndSub: Subscription;
+```
+
+`hoverIndex` indicates the index the item was last seen hovering over. This is an optimization property used to only move the component if its location has changed.
+
+`dragItems` is a collection of configuration objects the DragZone will use to populate itself initially.
+
+`showTarget` is used to change the state of the DragZone, to indicate whether an item is currently being dragged, and to reveal that it is an accepted drop location.
+
+`dropZoneRef` is the `ViewContainerRef` which will be the parent view to the `DragItemComponent`s contained within it.
+
+`dragStartSub` and `dragEndSub` are `Subscription`s which should be closed on destroy
+
+The `DropZoneComponent` is responsible for handling the attaching and detaching of the dragged items View. This is takes place in `attachItemView`:
+
+```
+attachItemView(componentRef: ComponentRef<DragItemComponent>, index?: number) {
+  if (index === this.hoverIndex && this.dropZoneRef === componentRef.instance.parentView) {
+    return
+  }
+
+  if (componentRef.instance.parentView) {
+    const curIdx = componentRef.instance.parentView.indexOf(componentRef.hostView);
+    if (curIdx !== -1) {
+      componentRef.instance.parentView.detach(curIdx);
+    }
+  }
+  componentRef.instance.parentView = this.dropZoneRef;
+  this.dropZoneRef.insert(componentRef.hostView, index);
+}
+```
+
+The first check ensures that the Component to be attached is not already attached to the current DragZone in the same index location. The next check determines whether the Component is attached to a view at all, and detaches it if so. This prepares the Component for the final step, which is to insert the Component to the current DragZone at the specified index location, and update its parentView reference to reflect the new parent.
+
+#### Handle the drag and drop
+
+The logic for calculating the drop location requires knowledge of the current state of the DOM. Because interfacing directly with the DOM is discouraged outside of Directives in Angular, we'll do exactly that.
+
+### DragZoneDirective
+
+Use the `@HostBinding` decorator to register the `dragover` event on the directive. Create an Output on the directive which will essentially wrap the `dragover` event and return at what index the current mouse position indicates a drop should occur.
+
+```
+@Output('sfDragIndex') sfDragIndex: EventEmitter<number> = new EventEmitter();
+
+constructor(
+  private dragZone: ViewContainerRef
+) { }
+
+
+@HostListener('dragover', ['$event'])
+onDragOver(event) {
+  event.preventDefault();
+
+  const index = this.calculateDropIndex(event);
+
+  this.sfDragIndex.next(index);
+}
+```
+
+Bind the sfDragIndex property to the DragZoneComponent:
+
+```
+<div
+  sfDropZone
+  (sfDragIndex)="dragIndexChanged($event)"
+  class="drag-zone">
+  <ng-container #dropZone></ng-container>
+</div>
+```
+
+and use it to attach the dragged item to the hovered DropZone at the calculated index:
+
+```
+dragIndexChanged(index: number) {
+  if (this.dragService.dragItem) {
+    this.attachItemView(this.dragService.dragItem, index);
+
+  }
+  this.hoverIndex = index;
+}
+```
+
+### Conclusion
+
+While Angular provides a fantastic and easy to learn framework for creating relatively static predetermined views, the API for creating components dynamically can take some getting used to. Experiments that test the functionality of the lesser known or utilized API's such as those exposed by the `ComponentRef`, `ViewContainerRef` and `ViewRef` can lead to some pretty cool results and a deeper understanding of the less common but extremely powerful parts of the Angular ecosystem.

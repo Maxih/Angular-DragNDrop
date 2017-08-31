@@ -1,0 +1,8 @@
+<div
+  [ngClass]="{'drag-item--dragged': isDragged}"
+  class="drag-item">
+  <div class="m-dragitem-ghost"></div>
+  <div class="m-dragitem__content">
+    <ng-container #itemContainer></ng-container>
+  </div>
+</div>

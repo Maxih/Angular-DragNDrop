@@ -31,7 +31,7 @@ export class DragService {
     itemRef.instance.itemRef = itemRef;
 
     const contentRef = itemRef.instance.itemContainer.createComponent(
-      this.factoryResolver.resolveComponentFactory(item.component)
+      this.factoryResolver.resolveComponentFactory(item.component), 0, injector
     );
 
     if (item.data) {

@@ -1,10 +1,11 @@
 import {
   ComponentRef, Component, HostBinding, Input, OnChanges, OnInit, SimpleChanges, ViewContainerRef,
-  ViewRef, ViewChild
+  ViewRef, ViewChild, OnDestroy
 } from '@angular/core';
 import {DragService} from '../drag.service';
 import {DragItemComponent} from '../drag-item/drag-item.component';
 import {DragItemConfig} from '../drag-item/drag-item-config';
+import {Subscription} from 'rxjs/Subscription';
 
 @Component({
   selector: 'sf-drop-zone',
@@ -12,9 +13,9 @@ import {DragItemConfig} from '../drag-item/drag-item-config';
   styleUrls: ['./drop-zone.component.less']
 })
 
-export class DropZoneComponent implements OnInit, OnChanges {
+export class DropZoneComponent implements OnInit, OnChanges, OnDestroy {
 
-  hoverIndex:number = null;
+  hoverIndex: number = null;
 
   @Input('sfDragItems') dragItems: DragItemConfig[] = [];
 
@@ -22,16 +23,19 @@ export class DropZoneComponent implements OnInit, OnChanges {
 
   @ViewChild('dropZone', { read: ViewContainerRef }) dropZoneRef: ViewContainerRef;
 
+  dragStartSub: Subscription;
+  dragEndSub: Subscription;
+
   constructor(
     private dragService: DragService
   ) { }
 
   ngOnInit() {
-    this.dragService.onDragStart.subscribe((item: ComponentRef<DragItemComponent>) => {
+    this.dragStartSub = this.dragService.onDragStart.subscribe((item: ComponentRef<DragItemComponent>) => {
       this.showTarget = true;
     });
 
-    this.dragService.onDragEnd.subscribe((item: ComponentRef<DragItemComponent>) => {
+    this.dragEndSub = this.dragService.onDragEnd.subscribe((item: ComponentRef<DragItemComponent>) => {
       this.showTarget = false;
     })
 
@@ -46,10 +50,23 @@ export class DropZoneComponent implements OnInit, OnChanges {
     }
   }
 
+  ngOnDestroy() {
+    this.dragStartSub.unsubscribe();
+    this.dragEndSub.unsubscribe();
+  }
+
   buildItem(item: DragItemConfig) {
     const itemRef = this.dragService.createDragItem(item);
     /* createDragItem returns a componentRef that isnt attached to any view. Attach it to the dropzone*/
     this.attachItemView(itemRef);
+  }
+
+  dragIndexChanged(index: number) {
+    if (this.dragService.dragItem) {
+      this.attachItemView(this.dragService.dragItem, index);
+
+    }
+    this.hoverIndex = index;
   }
 
   attachItemView(componentRef: ComponentRef<DragItemComponent>, index?: number) {
@@ -65,13 +82,5 @@ export class DropZoneComponent implements OnInit, OnChanges {
     }
     componentRef.instance.parentView = this.dropZoneRef;
     this.dropZoneRef.insert(componentRef.hostView, index);
-  }
-
-  dragIndexChanged(index: number) {
-    if (this.dragService.dragItem) {
-      this.attachItemView(this.dragService.dragItem, index);
-
-    }
-    this.hoverIndex = index;
   }
 }

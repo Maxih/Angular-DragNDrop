@@ -1,6 +1,6 @@
 # SF Drag and Drop
 
-An Experiment in dynamically creating and manipulating Components dynamically in Angular 4.
+An Experiment in dynamically creating and manipulating Components in Angular 4.
 
 ## Overview
 Angular’s templating system allows for quickly constructing Views within the Angular framework. A drawback of this system is that statically built components from within the template don’t expose some interesting and powerful API’s that can be used to create even more dynamic and responsive apps from within the Angular framework.
